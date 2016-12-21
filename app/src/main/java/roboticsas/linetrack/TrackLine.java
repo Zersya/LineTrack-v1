@@ -46,20 +46,22 @@ public class TrackLine {
 
     public void setScalar(int lowerH, int lowerS, int lowerV, int upperH, int upperS, int upperV){
 
-        mLowerBound = new Scalar(0, 0, 173);
-        mUpperBound = new Scalar(215, 224, 255);
-//        mLowerBound = new Scalar(lowerH, lowerS, lowerV);
-//        mUpperBound = new Scalar(upperH, upperS, upperV);
+//        mLowerBound = new Scalar(0, 0, 173);
+//        mUpperBound = new Scalar(215, 224, 255);
+        mLowerBound = new Scalar(lowerH, lowerS, lowerV);
+        mUpperBound = new Scalar(upperH, upperS, upperV);
     }
 
     public void ProcThresh(Mat mRgba){
-        Imgproc.blur(mRgba, mRgba, new Size(8, 8));
+        Imgproc.blur(mRgba, mRgba, new Size(1, 1));
         Imgproc.cvtColor(mRgba, mHsvMat, Imgproc.COLOR_RGB2HSV_FULL);
         Core.inRange(mHsvMat, mLowerBound, mUpperBound, mMask);
         Imgproc.dilate(mMask, mDillateMask, new Mat());
         mFinal = mRgba;
         ProcContour();
     }
+
+
     public void ProcContour(){
         int largestArea = 0;
         int largestContourIndex = 0;
@@ -88,10 +90,10 @@ public class TrackLine {
         centerMoment.x = x;
         centerMoment.y = y;
         try {
-            Imgproc.circle(mFinal, centerMoment, 2, new Scalar(255, 0, 150, 255), 2);
+            Core.circle(mFinal, centerMoment, 2, new Scalar(255, 0, 150, 255), 2);
 
 //            Core.rectangle(mFinal, bounding_rect.tl(), bounding_rect.br(), new Scalar(255, 0, 150, 255), 1);
-//            Imgproc.drawContours(mFinal, getContours(), largestContourIndex, new Scalar(255, 0, 0, 255), 2);
+            Imgproc.drawContours(mFinal, getContours(), largestContourIndex, new Scalar(255, 0, 0, 255), 2);
 
             mContour.clear();
         }catch(Exception e) {

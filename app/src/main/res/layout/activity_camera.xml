@@ -153,23 +153,42 @@
                         android:layout_height="wrap_content"
                         android:id="@+id/SensorT" />
 
-                    <TextView
-                        android:text="Status"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:id="@+id/Status" />
-
                     <Button
                         android:text="Open"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:id="@+id/btnOpen" />
-                        android:id="@+id/btnWrite" />
                     <Button
                         android:text="Close"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:id="@+id/btnClose" />
+
+                    <ScrollView
+                        android:fillViewport="true"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:id="@+id/sv" >
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" >
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:id="@+id/Status"
+                                android:layout_below="@+id/btnClose"
+                                android:layout_alignParentLeft="true"
+                                android:layout_alignParentStart="true"
+                                android:layout_alignRight="@+id/editText"
+                                android:layout_alignEnd="@+id/editText"
+                                android:layout_alignParentBottom="true" />
+                        </LinearLayout>
+                    </ScrollView>
+
+
                 </LinearLayout>
             </FrameLayout>
         </LinearLayout>

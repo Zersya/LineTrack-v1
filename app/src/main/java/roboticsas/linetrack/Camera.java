@@ -17,12 +17,14 @@ import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TabHost;
@@ -67,6 +69,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
     SeekBar lowerH,lowerS,lowerV,upperH,upperS,upperV;
     TextView tlowerH,tlowerS,tlowerV,tupperH,tupperS,tupperV, ScalarT, Status, SensorT;
     Button btnOpen, btnClose;
+    ScrollView scrollView;
     int tlH,tlS,tlV,tuH,tuS,tuV;
     float accelX, accelY, accelZ;
     boolean stat = false;
@@ -192,6 +195,8 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
             }
         });
 
+
+
         ScalarT = (TextView) findViewById(R.id.Scalar);
         lowerH = (SeekBar) findViewById(R.id.barlowerH);
         tlowerH = (TextView) findViewById(R.id.lowerH);
@@ -208,6 +213,8 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         tupperV = (TextView) findViewById(R.id.upperV);
 
         Status = (TextView) findViewById(R.id.Status);
+        scrollView = (ScrollView) findViewById(R.id.sv);
+
         SensorT = (TextView) findViewById(R.id.SensorT);
 
         ScalarT.setTextColor(Color.WHITE);
@@ -246,9 +253,12 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         upperV.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) this);
 
         mOpenCVCameraView = (JavaCameraView) findViewById(R.id.show_camera_activity_java_surface_view);
-        mOpenCVCameraView.setMaxFrameSize(220, 620);
+        mOpenCVCameraView.setMaxFrameSize(320, 620);
         mOpenCVCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCVCameraView.setCvCameraViewListener(this);
+
+
+
 
 
     }
@@ -263,7 +273,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
                 for (Map.Entry<String, UsbDevice> entry : usbDevices.entrySet()) {
                     device = entry.getValue();
                     int deviceVID = device.getVendorId();
-                    if (deviceVID == 0x1A86)//Arduino Vendor ID
+                    if (deviceVID == 0x2341)//Arduino Vendor ID
                     {
                         PendingIntent pi = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
                         usbManager.requestPermission(device, pi);
@@ -288,7 +298,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
     public void onClickStop(View view) {
         try {
             serialPort.close();
-            Status.setText("Disconnected");
+            tvAppend(Status,"\nSerial Connection Closed! \n");
         }catch(Exception e){
             Status.setText(e.toString());
         }
@@ -297,7 +307,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
 
     public String sendData(){
         try {
-            String data = String.valueOf(trackLine.getCenterMoment().y + "\n");
+            String data = String.valueOf(trackLine.getCenterMoment().x + "," + trackLine.getCenterMoment().y + "\n");
 //            if(trackLine.getCenterMoment().y < 235 && trackLine.getCenterMoment().y > 150){
 //                data = "1";
 //            }
@@ -315,32 +325,45 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         }
     }
 
+    private void tvAppend(TextView tv, CharSequence text) {
+        final TextView ftv = tv;
+        final CharSequence ftext = text;
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ftv.append(ftext);
+            }
+        });
+    }
+
+
     @Override
     public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
         switch(seekBar.getId()){
             case R.id.barlowerH:
                 tlowerH.setText("LowerH " + i);
-                tlH = 0;
+                tlH = i;
                 break;
             case R.id.barlowerS:
                 tlowerS.setText("LowerS " + i);
-                tlS = 0;
+                tlS = i;
                 break;
             case R.id.barlowerV:
                 tlowerV.setText("LowerV " + i);
-                tlV = 173;
+                tlV = i;
                 break;
             case R.id.barupperH:
                 tupperH.setText("UpperH " + i);
-                tuH = 215;
+                tuH = i;
                 break;
             case R.id.barupperS:
                 tupperS.setText("UpperS " + i);
-                tuS = 224;
+                tuS = i;
                 break;
             case R.id.barupperV:
                 tupperV.setText("UpperV " + i);
-                tuV = 255;
+                tuV = i;
                 break;
         }
     }
@@ -368,7 +391,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
 
         if(!OpenCVLoader.initDebug()){
             Log.d(TAG, "Internal OpenCV not found, Using OpenCV manager for Initialize");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_13, this, mLoaderCallback);
         } else{
             Log.d(TAG, "OpenCV loader found inside The Package, Using it!!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
@@ -403,15 +426,22 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         mRgba = inputFrame.rgba();
-//        trackLine.setScalar(tlH,tlS,tlV,tuH,tuS,tuV);
-//        trackLine.ProcThresh(mRgba);
-        trackLine.drawContour(mRgba);
+        trackLine.setScalar(tlH,tlS,tlV,tuH,tuS,tuV);
+        trackLine.ProcThresh(mRgba);
+//        trackLine.drawContour(mRgba);
 
         if (trackLine.getBounding_rect() != null) {
             System.out.println("Data BR : " + trackLine.getBounding_rect().x + " , " + trackLine.getBounding_rect().y);
         }
         if (connection != null) {
             serialPort.write(sendData().getBytes());
+            tvAppend(Status, "\nData Sent : " + sendData());
+            scrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    scrollView.fullScroll(View.FOCUS_DOWN);
+                }
+            });
         }
 
         return mRgba;
@@ -435,8 +465,6 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         accelX = linear_accel[0];
         accelY = linear_accel[1];
         accelZ = linear_accel[2];
-
-        Status.setText(sendData());
     }
 
     @Override
