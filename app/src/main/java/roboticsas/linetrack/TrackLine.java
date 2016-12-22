@@ -35,6 +35,11 @@ public class TrackLine {
     //Variable untuk Pengaturan/Pemilihan Warna
     private Scalar mLowerBound = new Scalar(0);
     private Scalar mUpperBound = new Scalar(0);
+    // Color radius for range checking in HSV color space
+    private Scalar mColorRadius = new Scalar(25,50,50,0);
+    private Mat mSpectrum = new Mat();
+    // Minimum contour area in percent for contours filtering
+    private static double mMinContourArea = 0.1;
     //Variable untuk mencari Contour warna
     private List<MatOfPoint> mContour = new ArrayList<MatOfPoint>();
     //Variable untuk menyimpan titik Tengah Warna
@@ -44,6 +49,45 @@ public class TrackLine {
     private int thresh = 50, N = 11;
 
 
+    public void setColorRadius(Scalar radius) {
+        mColorRadius = radius;
+    }
+
+    public void setHsvColor(Scalar hsvColor) {
+        double minH = (hsvColor.val[0] >= mColorRadius.val[0]) ? hsvColor.val[0]-mColorRadius.val[0] : 0;
+        double maxH = (hsvColor.val[0]+mColorRadius.val[0] <= 255) ? hsvColor.val[0]+mColorRadius.val[0] : 255;
+
+        mLowerBound.val[0] = minH;
+        mUpperBound.val[0] = maxH;
+
+        mLowerBound.val[1] = hsvColor.val[1] - mColorRadius.val[1];
+        mUpperBound.val[1] = hsvColor.val[1] + mColorRadius.val[1];
+
+        mLowerBound.val[2] = hsvColor.val[2] - mColorRadius.val[2];
+        mUpperBound.val[2] = hsvColor.val[2] + mColorRadius.val[2];
+
+        mLowerBound.val[3] = 0;
+        mUpperBound.val[3] = 255;
+
+        Mat spectrumHsv = new Mat(1, (int)(maxH-minH), CvType.CV_8UC3);
+
+        for (int j = 0; j < maxH-minH; j++) {
+            byte[] tmp = {(byte)(minH+j), (byte)255, (byte)255};
+            spectrumHsv.put(0, j, tmp);
+        }
+
+        Imgproc.cvtColor(spectrumHsv, mSpectrum, Imgproc.COLOR_HSV2RGB_FULL, 4);
+    }
+
+    public Mat getSpectrum() {
+        return mSpectrum;
+    }
+
+    public void setMinContourArea(double area) {
+        mMinContourArea = area;
+    }
+
+    //Using Trackbar
     public void setScalar(int lowerH, int lowerS, int lowerV, int upperH, int upperS, int upperV){
 
 //        mLowerBound = new Scalar(0, 0, 173);
@@ -61,7 +105,6 @@ public class TrackLine {
         ProcContour();
     }
 
-
     public void ProcContour(){
         int largestArea = 0;
         int largestContourIndex = 0;
@@ -69,7 +112,6 @@ public class TrackLine {
         Mat mHierarchy = new Mat();
         Imgproc.findContours(mDillateMask, mContour, mHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        List<MatOfPoint2f> mc = new ArrayList<MatOfPoint2f>(getContours().size());
         List<Moments> mu = new ArrayList<Moments>(getContours().size());
         int x = 0, y = 0;
 
@@ -92,7 +134,7 @@ public class TrackLine {
         try {
             Core.circle(mFinal, centerMoment, 2, new Scalar(255, 0, 150, 255), 2);
 
-//            Core.rectangle(mFinal, bounding_rect.tl(), bounding_rect.br(), new Scalar(255, 0, 150, 255), 1);
+            Core.rectangle(mFinal, bounding_rect.tl(), bounding_rect.br(), new Scalar(255, 0, 150, 255), 1);
             Imgproc.drawContours(mFinal, getContours(), largestContourIndex, new Scalar(255, 0, 0, 255), 2);
 
             mContour.clear();
@@ -224,6 +266,7 @@ public class TrackLine {
     public List<MatOfPoint> getContours(){
         return mContour;
     }
-
+    public Scalar getmLowerBound(){ return mLowerBound; }
+    public Scalar getmUpperBound() { return mUpperBound; }
 
 }

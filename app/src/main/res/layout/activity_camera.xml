@@ -33,8 +33,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:orientation="vertical">
-
-
                 </LinearLayout>
 
                 <org.opencv.android.JavaCameraView
@@ -44,102 +42,7 @@
                     opencv:show_fps="true"
                     opencv:camera_id="any" />
 
-                <LinearLayout
-                    android:id="@+id/tab2"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical">
 
-                    <ScrollView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical" >
-
-                            <TextView
-                                android:text="Scalar"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:textAlignment="center"
-                                android:id="@+id/Scalar" />
-
-                            <TextView
-                                android:text="LowerH"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:id="@+id/lowerH" />
-
-                            <SeekBar
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:max="255"
-                                android:id="@+id/barlowerH" />
-
-                            <TextView
-                                android:text="LowerS"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:id="@+id/lowerS" />
-
-                            <SeekBar
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:max="255"
-                                android:id="@+id/barlowerS" />
-
-                            <TextView
-                                android:text="LowerV"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:id="@+id/lowerV" />
-
-                            <SeekBar
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:max="255"
-                                android:id="@+id/barlowerV" />
-
-                            <TextView
-                                android:text="UpperH"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:id="@+id/upperH" />
-
-                            <SeekBar
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:max="255"
-                                android:id="@+id/barupperH" />
-
-                            <TextView
-                                android:text="UpperS"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:id="@+id/upperS" />
-
-                            <SeekBar
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:max="255"
-                                android:id="@+id/barupperS" />
-
-                            <TextView
-                                android:text="UpperV"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:id="@+id/upperV" />
-
-                            <SeekBar
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:max="255"
-                                android:id="@+id/barupperV" />
-                        </LinearLayout>
-                    </ScrollView>
-                </LinearLayout>
                 <LinearLayout
                     android:id="@+id/tab3"
                     android:layout_width="match_parent"

@@ -58,35 +58,37 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Camera extends AppCompatActivity implements OnSeekBarChangeListener, CameraBridgeViewBase.CvCameraViewListener2, SensorEventListener {
+public class Camera extends AppCompatActivity implements OnTouchListener, CameraBridgeViewBase.CvCameraViewListener2, SensorEventListener {
 
 
     //Init Method
-    private static final String TAG = "OCVSample::Activity";
-    public final String ACTION_USB_PERMISSION = "roboticsas.linetrack.USB_PERMISSION";
-    private CameraBridgeViewBase mOpenCVCameraView;
+    private static final String     TAG = "OCVSample::Activity";
+    public final String             ACTION_USB_PERMISSION = "roboticsas.linetrack.USB_PERMISSION";
+    private CameraBridgeViewBase    mOpenCVCameraView;
 
-    SeekBar lowerH,lowerS,lowerV,upperH,upperS,upperV;
-    TextView tlowerH,tlowerS,tlowerV,tupperH,tupperS,tupperV, ScalarT, Status, SensorT;
-    Button btnOpen, btnClose;
-    ScrollView scrollView;
-    int tlH,tlS,tlV,tuH,tuS,tuV;
-    float accelX, accelY, accelZ;
-    boolean stat = false;
-    Camera camera;
-
+    SeekBar                         lowerH,lowerS,lowerV,upperH,upperS,upperV;
+    TextView                        tlowerH,tlowerS,tlowerV,tupperH,tupperS,tupperV, ScalarT, Status, SensorT;
+    Button                          btnOpen, btnClose;
+    ScrollView                      scrollView;
+    int                             tlH,tlS,tlV,tuH,tuS,tuV;
+    float                           accelX, accelY, accelZ;
+    boolean                         stat = false;
+    private boolean                 mIsColorSelected = false;
+    private Mat                     mSpectrum;
+    private Size                    SPECTRUM_SIZE;
+    private Scalar                  mBlobColorRgba;
+    private Scalar                  mBlobColorHsv;
 
     //Init Attribute Citra
-    private Mat             mRgba;
-    private Mat             mHsv;
-    private TrackLine       trackLine;
-    private Context cont;
-    private SensorManager mSensorManager;
-    private Sensor mSensor;
-    UsbManager usbManager;
-    UsbDevice device;
-    UsbSerialDevice serialPort;
-    UsbDeviceConnection connection;
+    private Mat                     mRgba;
+    private Mat                     mHsv;
+    private TrackLine               trackLine;
+    private SensorManager           mSensorManager;
+    private Sensor                  mSensor;
+    UsbManager                      usbManager;
+    UsbDevice                       device;
+    UsbSerialDevice                 serialPort;
+    UsbDeviceConnection             connection;
 
     public String getAndroidVersion(){
         String release = Build.VERSION.RELEASE;
@@ -143,6 +145,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
                 case LoaderCallbackInterface.SUCCESS: {
                     Log.i(TAG, "OpenCV Loaded Succesfuly");
                     mOpenCVCameraView.enableView();
+                    mOpenCVCameraView.setOnTouchListener((OnTouchListener) Camera.this);
                 }
                 break;
                 default: {
@@ -167,12 +170,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         spec1.setContent(R.id.tab1);
         spec1.setIndicator("Camera");
         tabHost.addTab(spec1);
-        //Tab 2
-        TabHost.TabSpec spec2 = tabHost.newTabSpec("Scalar");
-        spec2.setContent(R.id.tab2);
-        spec2.setIndicator("Scalar");
-        tabHost.addTab(spec2);
-//        //Tab 3
+//        //Tab 32
         TabHost.TabSpec spec3 = tabHost.newTabSpec("Connection");
         spec3.setContent(R.id.tab3);
         spec3.setIndicator("Connection");
@@ -195,45 +193,22 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
             }
         });
 
-
-
-        ScalarT = (TextView) findViewById(R.id.Scalar);
-        lowerH = (SeekBar) findViewById(R.id.barlowerH);
-        tlowerH = (TextView) findViewById(R.id.lowerH);
-        lowerS = (SeekBar) findViewById(R.id.barlowerS);
-        tlowerS = (TextView) findViewById(R.id.lowerS);
-        lowerV = (SeekBar) findViewById(R.id.barlowerV);
-        tlowerV = (TextView) findViewById(R.id.lowerV);
-
-        upperH = (SeekBar) findViewById(R.id.barupperH);
-        tupperH = (TextView) findViewById(R.id.upperH);
-        upperS = (SeekBar) findViewById(R.id.barupperS);
-        tupperS = (TextView) findViewById(R.id.upperS);
-        upperV = (SeekBar) findViewById(R.id.barupperV);
-        tupperV = (TextView) findViewById(R.id.upperV);
-
         Status = (TextView) findViewById(R.id.Status);
         scrollView = (ScrollView) findViewById(R.id.sv);
 
         SensorT = (TextView) findViewById(R.id.SensorT);
 
-        ScalarT.setTextColor(Color.WHITE);
-        tupperH.setTextColor(Color.WHITE);
-        tlowerH.setTextColor(Color.WHITE);
-        tlowerS.setTextColor(Color.WHITE);
-        tlowerV.setTextColor(Color.WHITE);
-        tupperH.setTextColor(Color.WHITE);
-        tupperS.setTextColor(Color.WHITE);
-        tupperV.setTextColor(Color.WHITE);
         Status.setTextColor(Color.WHITE);
         SensorT.setTextColor(Color.WHITE);
 
         PackageManager pm = this.getPackageManager();
         boolean accel = pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER);
+        boolean compas = pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_COMPASS);
         if (accel) {
-            if (accel) {
-                Toast.makeText(getApplicationContext(), "Ada Sensor Accel", Toast.LENGTH_SHORT).show();
-            }
+            Toast.makeText(getApplicationContext(), "Ada Sensor Accel", Toast.LENGTH_SHORT).show();
+        }
+        else if(compas && accel){
+            Toast.makeText(getApplicationContext(), "Ada Sensor Compas dan Accel", Toast.LENGTH_LONG).show();
         }
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -245,21 +220,10 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         registerReceiver(broadcastReceiver, filter);
 
-        lowerH.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) this);
-        lowerS.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) this);
-        lowerV.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) this);
-        upperH.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) this);
-        upperS.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) this);
-        upperV.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) this);
-
         mOpenCVCameraView = (JavaCameraView) findViewById(R.id.show_camera_activity_java_surface_view);
-        mOpenCVCameraView.setMaxFrameSize(320, 620);
+//        mOpenCVCameraView.setMaxFrameSize(320, 620);
         mOpenCVCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCVCameraView.setCvCameraViewListener(this);
-
-
-
-
 
     }
 
@@ -289,7 +253,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
                 }
             }
         }catch(Exception e){
-            Status.setText(e.toString());
+
         }
 
     }
@@ -300,7 +264,7 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
             serialPort.close();
             tvAppend(Status,"\nSerial Connection Closed! \n");
         }catch(Exception e){
-            Status.setText(e.toString());
+
         }
     }
 
@@ -308,16 +272,6 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
     public String sendData(){
         try {
             String data = String.valueOf(trackLine.getCenterMoment().x + "," + trackLine.getCenterMoment().y + "\n");
-//            if(trackLine.getCenterMoment().y < 235 && trackLine.getCenterMoment().y > 150){
-//                data = "1";
-//            }
-//            else if(trackLine.getCenterMoment().y < 150 && trackLine.getCenterMoment().y > 100){
-//                data = "2";
-//            }
-//            else if(trackLine.getCenterMoment().y > 10 && trackLine.getCenterMoment().y < 100){
-//                data = "3";
-//            }else { data = ""; }
-
 
             return data;
         }catch (Exception e){
@@ -337,46 +291,6 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         });
     }
 
-
-    @Override
-    public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-        switch(seekBar.getId()){
-            case R.id.barlowerH:
-                tlowerH.setText("LowerH " + i);
-                tlH = i;
-                break;
-            case R.id.barlowerS:
-                tlowerS.setText("LowerS " + i);
-                tlS = i;
-                break;
-            case R.id.barlowerV:
-                tlowerV.setText("LowerV " + i);
-                tlV = i;
-                break;
-            case R.id.barupperH:
-                tupperH.setText("UpperH " + i);
-                tuH = i;
-                break;
-            case R.id.barupperS:
-                tupperS.setText("UpperS " + i);
-                tuS = i;
-                break;
-            case R.id.barupperV:
-                tupperV.setText("UpperV " + i);
-                tuV = i;
-                break;
-        }
-    }
-
-    @Override
-    public void onStartTrackingTouch(SeekBar seekBar) {
-
-    }
-
-    @Override
-    public void onStopTrackingTouch(SeekBar seekBar) {
-
-    }
 
     public void onPause(){
         super.onPause();
@@ -412,7 +326,11 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(width, height, CvType.CV_8UC4);
         mHsv = new Mat();
+        mSpectrum = new Mat();
         trackLine = new TrackLine();
+        mBlobColorRgba = new Scalar(255);
+        mBlobColorHsv = new Scalar(255);
+        SPECTRUM_SIZE = new Size(200, 64);
     }
 
     @Override
@@ -421,29 +339,30 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
         mHsv.release();
     }
 
-
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         mRgba = inputFrame.rgba();
-        trackLine.setScalar(tlH,tlS,tlV,tuH,tuS,tuV);
-        trackLine.ProcThresh(mRgba);
-//        trackLine.drawContour(mRgba);
+        if(mIsColorSelected) {
+            trackLine.ProcThresh(mRgba);
+            trackLine.drawContour(mRgba);
+            Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
+            mSpectrum.copyTo(spectrumLabel);
+            if (trackLine.getBounding_rect() != null) {
+                System.out.println("Data BR : " + trackLine.getBounding_rect().x + " , " + trackLine.getBounding_rect().y);
+            }
+//            if (connection != null) {
+//                serialPort.write(sendData().getBytes());
+//                tvAppend(Status, "\nData Arduino : " + sendData());
+//                scrollView.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        scrollView.fullScroll(View.FOCUS_DOWN);
+//                    }
+//                });
+//            }
 
-        if (trackLine.getBounding_rect() != null) {
-            System.out.println("Data BR : " + trackLine.getBounding_rect().x + " , " + trackLine.getBounding_rect().y);
         }
-        if (connection != null) {
-            serialPort.write(sendData().getBytes());
-            tvAppend(Status, "\nData Sent : " + sendData());
-            scrollView.post(new Runnable() {
-                @Override
-                public void run() {
-                    scrollView.fullScroll(View.FOCUS_DOWN);
-                }
-            });
-        }
-
         return mRgba;
     }
 
@@ -472,11 +391,66 @@ public class Camera extends AppCompatActivity implements OnSeekBarChangeListener
 
     }
 
-    public float getAccelX(){ return accelX; }
-    public float getAccelY(){ return accelY; }
-    public float getAccelZ(){ return accelZ; }
-    public Context getCont(){
-        return cont;
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+
+        int cols = mRgba.cols();
+        int rows = mRgba.rows();
+
+        int xOffset = (mOpenCVCameraView.getWidth() - cols) / 2;
+        int yOffset = (mOpenCVCameraView.getHeight() - rows) / 2;
+
+        int x = (int)event.getX() - xOffset;
+        int y = (int)event.getY() - yOffset;
+
+        Log.i(TAG, "Touch image coordinates: (" + x + ", " + y + ")");
+
+        if ((x < 0) || (y < 0) || (x > cols) || (y > rows)) return false;
+
+        Rect touchedRect = new Rect();
+
+        touchedRect.x = (x>4) ? x-4 : 0;
+        touchedRect.y = (y>4) ? y-4 : 0;
+
+        touchedRect.width = (x+4 < cols) ? x + 4 - touchedRect.x : cols - touchedRect.x;
+        touchedRect.height = (y+4 < rows) ? y + 4 - touchedRect.y : rows - touchedRect.y;
+
+        Mat touchedRegionRgba = mRgba.submat(touchedRect);
+
+        Mat touchedRegionHsv = new Mat();
+        Imgproc.cvtColor(touchedRegionRgba, touchedRegionHsv, Imgproc.COLOR_RGB2HSV_FULL);
+
+        // Calculate average color of touched region
+        mBlobColorHsv = Core.sumElems(touchedRegionHsv);
+        int pointCount = touchedRect.width*touchedRect.height;
+        for (int i = 0; i < mBlobColorHsv.val.length; i++)
+            mBlobColorHsv.val[i] /= pointCount;
+
+        mBlobColorRgba = converScalarHsv2Rgba(mBlobColorHsv);
+
+        Log.i(TAG, "Touched rgba color: (" + mBlobColorRgba.val[0] + ", " + mBlobColorRgba.val[1] +
+                ", " + mBlobColorRgba.val[2] + ", " + mBlobColorRgba.val[3] + ")");
+
+        trackLine.setHsvColor(mBlobColorHsv);
+
+        SensorT.setText("Lower Mask : " + trackLine.getmLowerBound().val[0] +"," + trackLine.getmLowerBound().val[1]+"," + trackLine.getmLowerBound().val[2]+"," + trackLine.getmLowerBound().val[3]+"\n"+
+                "Upper Mask : " + trackLine.getmUpperBound().val[0] +"," + trackLine.getmUpperBound().val[1]+"," + trackLine.getmUpperBound().val[2]+"," + trackLine.getmUpperBound().val[3]);
+
+        Imgproc.resize(trackLine.getSpectrum(), mSpectrum, SPECTRUM_SIZE);
+
+        mIsColorSelected = true;
+
+        touchedRegionRgba.release();
+        touchedRegionHsv.release();
+
+        return false;
     }
 
+    private Scalar converScalarHsv2Rgba(Scalar hsvColor) {
+        Mat pointMatRgba = new Mat();
+        Mat pointMatHsv = new Mat(1, 1, CvType.CV_8UC3, hsvColor);
+        Imgproc.cvtColor(pointMatHsv, pointMatRgba, Imgproc.COLOR_HSV2RGB_FULL, 4);
+
+        return new Scalar(pointMatRgba.get(0, 0));
+    }
 }
