@@ -15,20 +15,18 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.method.ScrollingMovementMethod;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
-import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TabHost;
-import android.widget.TabWidget;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,54 +41,51 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class Camera extends AppCompatActivity implements OnTouchListener, CameraBridgeViewBase.CvCameraViewListener2, SensorEventListener {
 
 
     //Init Method
-    private static final String     TAG = "OCVSample::Activity";
-    public final String             ACTION_USB_PERMISSION = "roboticsas.linetrack.USB_PERMISSION";
-    private CameraBridgeViewBase    mOpenCVCameraView;
+    private static final String TAG = "OCVSample::Activity";
+    public final String ACTION_USB_PERMISSION = "roboticsas.linetrack.USB_PERMISSION";
+    private CameraBridgeViewBase mOpenCVCameraView;
 
-    SeekBar                         lowerH,lowerS,lowerV,upperH,upperS,upperV;
-    TextView                        tlowerH,tlowerS,tlowerV,tupperH,tupperS,tupperV, ScalarT, Status, SensorT;
-    Button                          btnOpen, btnClose;
-    ScrollView                      scrollView;
-    int                             tlH,tlS,tlV,tuH,tuS,tuV;
-    float                           accelX, accelY, accelZ;
-    boolean                         stat = false;
-    private boolean                 mIsColorSelected = false;
-    private Mat                     mSpectrum;
-    private Size                    SPECTRUM_SIZE;
-    private Scalar                  mBlobColorRgba;
-    private Scalar                  mBlobColorHsv;
+
+    private SeekBar lowerH, lowerS, lowerV, upperH, upperS, upperV;
+    private TextView tlowerH, tlowerS, tlowerV, tupperH, tupperS, tupperV, ScalarT, Status, SensorT;
+    private Button btnOpen, btnClose;
+    private ScrollView scrollView;
+    private int tlH, tlS, tlV, tuH, tuS, tuV, vId;
+    private float accelX, accelY, accelZ;
+    private boolean stat = false;
+
+    private boolean mIsColorSelected = false;
+    private Mat mSpectrum;
+    private Size SPECTRUM_SIZE;
+    private Scalar mBlobColorRgba;
+    private Scalar mBlobColorHsv;
 
     //Init Attribute Citra
-    private Mat                     mRgba;
-    private Mat                     mHsv;
-    private TrackLine               trackLine;
-    private SensorManager           mSensorManager;
-    private Sensor                  mSensor;
-    UsbManager                      usbManager;
-    UsbDevice                       device;
-    UsbSerialDevice                 serialPort;
-    UsbDeviceConnection             connection;
+    private Mat mRgba;
+    private Mat mHsv;
+    private TrackLine trackLine;
+    private SensorManager mSensorManager;
+    private Sensor mSensor;
+    UsbManager usbManager;
+    UsbDevice device;
+    UsbSerialDevice serialPort;
+    UsbDeviceConnection connection;
 
-    public String getAndroidVersion(){
+    public String getAndroidVersion() {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
 
@@ -160,7 +155,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
-
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getAndroidVersion();
 
         TabHost tabHost = (TabHost) findViewById(R.id.tabHost);
@@ -180,6 +175,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         btnOpen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 onClickStart(view);
 
             }
@@ -199,6 +195,9 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         SensorT = (TextView) findViewById(R.id.SensorT);
 
         Status.setTextColor(Color.WHITE);
+        SensorT = (TextView) findViewById(R.id.SensorT);
+
+        Status.setTextColor(Color.WHITE);
         SensorT.setTextColor(Color.WHITE);
 
         PackageManager pm = this.getPackageManager();
@@ -206,8 +205,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         boolean compas = pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_COMPASS);
         if (accel) {
             Toast.makeText(getApplicationContext(), "Ada Sensor Accel", Toast.LENGTH_SHORT).show();
-        }
-        else if(compas && accel){
+        } else if (compas && accel) {
             Toast.makeText(getApplicationContext(), "Ada Sensor Compas dan Accel", Toast.LENGTH_LONG).show();
         }
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -221,9 +219,35 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         registerReceiver(broadcastReceiver, filter);
 
         mOpenCVCameraView = (JavaCameraView) findViewById(R.id.show_camera_activity_java_surface_view);
-//        mOpenCVCameraView.setMaxFrameSize(320, 620);
+
+        mOpenCVCameraView.setMaxFrameSize(768, 1024);
         mOpenCVCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCVCameraView.setCvCameraViewListener(this);
+
+//        new Thread() {
+//            @Override
+//            public void run() {
+//                while (true) {
+//                    if (connection != null) {
+//                        serialPort.write(sendData().getBytes());
+//                    }
+//
+//                    tvAppend(Status, "\nData Arduino : " + sendData());
+//
+//                    scrollView.post(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            scrollView.fullScroll(View.FOCUS_DOWN);
+//                        }
+//                    });
+//
+//                    try {
+//                        sleep(50);
+//                    } catch (InterruptedException e) {
+//                    }
+//                }
+//            }
+//        }.start();
 
     }
 
@@ -237,7 +261,8 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
                 for (Map.Entry<String, UsbDevice> entry : usbDevices.entrySet()) {
                     device = entry.getValue();
                     int deviceVID = device.getVendorId();
-                    if (deviceVID == 0x2341)//Arduino Vendor ID
+
+                    if (deviceVID == 0x1A86)//Arduino Vendor ID
                     {
                         PendingIntent pi = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
                         usbManager.requestPermission(device, pi);
@@ -251,8 +276,10 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
                     if (!keep)
                         break;
                 }
+
+
             }
-        }catch(Exception e){
+        } catch (Exception e) {
 
         }
 
@@ -262,19 +289,21 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
     public void onClickStop(View view) {
         try {
             serialPort.close();
-            tvAppend(Status,"\nSerial Connection Closed! \n");
-        }catch(Exception e){
+            tvAppend(Status, "\nSerial Connection Closed! \n");
+        } catch (Exception e) {
 
         }
     }
 
 
-    public String sendData(){
+    public String sendData() {
         try {
-            String data = String.valueOf(trackLine.getCenterMoment().x + "," + trackLine.getCenterMoment().y + "\n");
+//            String data = (int) trackLine.getCenterMoment().y + ":" + (int) trackLine.getCenterMoment().x + "\n";
+//            String data = kondisiDataBola();
+            String data = kondisiDataGaris();
 
             return data;
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
@@ -292,21 +321,21 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
     }
 
 
-    public void onPause(){
+    public void onPause() {
         super.onPause();
-        if(mOpenCVCameraView != null){
+        if (mOpenCVCameraView != null) {
             mOpenCVCameraView.disableView();
         }
         mSensorManager.unregisterListener(this);
     }
 
-    public void onResume(){
+    public void onResume() {
         super.onResume();
 
-        if(!OpenCVLoader.initDebug()){
+        if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV not found, Using OpenCV manager for Initialize");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_13, this, mLoaderCallback);
-        } else{
+        } else {
             Log.d(TAG, "OpenCV loader found inside The Package, Using it!!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
@@ -314,10 +343,10 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
     }
 
-    public void onDestroy(){
+    public void onDestroy() {
         super.onDestroy();
 
-        if(mOpenCVCameraView != null){
+        if (mOpenCVCameraView != null) {
             mOpenCVCameraView.disableView();
         }
     }
@@ -343,33 +372,35 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         mRgba = inputFrame.rgba();
-        if(mIsColorSelected) {
-            trackLine.ProcThresh(mRgba);
-            trackLine.drawContour(mRgba);
-            Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
-            mSpectrum.copyTo(spectrumLabel);
-            if (trackLine.getBounding_rect() != null) {
-                System.out.println("Data BR : " + trackLine.getBounding_rect().x + " , " + trackLine.getBounding_rect().y);
-            }
-//            if (connection != null) {
-//                serialPort.write(sendData().getBytes());
-//                tvAppend(Status, "\nData Arduino : " + sendData());
-//                scrollView.post(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        scrollView.fullScroll(View.FOCUS_DOWN);
-//                    }
-//                });
-//            }
+//        if (mIsColorSelected) {
 
+        trackLine.ProcThresh(mRgba);
+//            trackLine.drawContour(mRgba);
+        if (connection != null) {
+            serialPort.write(sendData().getBytes());
         }
+
+        tvAppend(Status, "\nData Arduino : " + sendData());
+
+        scrollView.post(new Runnable() {
+            @Override
+            public void run() {
+                scrollView.fullScroll(View.FOCUS_DOWN);
+            }
+        });
+//        }
+
+        Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
+        mSpectrum.copyTo(spectrumLabel);
+
+
         return mRgba;
     }
 
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        final float alpha =  0.8f;
+        final float alpha = 0.8f;
 
         float gravity[] = new float[4];
         float linear_accel[] = new float[4];
@@ -400,8 +431,8 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         int xOffset = (mOpenCVCameraView.getWidth() - cols) / 2;
         int yOffset = (mOpenCVCameraView.getHeight() - rows) / 2;
 
-        int x = (int)event.getX() - xOffset;
-        int y = (int)event.getY() - yOffset;
+        int x = (int) event.getX() - xOffset;
+        int y = (int) event.getY() - yOffset;
 
         Log.i(TAG, "Touch image coordinates: (" + x + ", " + y + ")");
 
@@ -409,11 +440,11 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         Rect touchedRect = new Rect();
 
-        touchedRect.x = (x>4) ? x-4 : 0;
-        touchedRect.y = (y>4) ? y-4 : 0;
+        touchedRect.x = (x > 4) ? x - 4 : 0;
+        touchedRect.y = (y > 4) ? y - 4 : 0;
 
-        touchedRect.width = (x+4 < cols) ? x + 4 - touchedRect.x : cols - touchedRect.x;
-        touchedRect.height = (y+4 < rows) ? y + 4 - touchedRect.y : rows - touchedRect.y;
+        touchedRect.width = (x + 4 < cols) ? x + 4 - touchedRect.x : cols - touchedRect.x;
+        touchedRect.height = (y + 4 < rows) ? y + 4 - touchedRect.y : rows - touchedRect.y;
 
         Mat touchedRegionRgba = mRgba.submat(touchedRect);
 
@@ -422,7 +453,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         // Calculate average color of touched region
         mBlobColorHsv = Core.sumElems(touchedRegionHsv);
-        int pointCount = touchedRect.width*touchedRect.height;
+        int pointCount = touchedRect.width * touchedRect.height;
         for (int i = 0; i < mBlobColorHsv.val.length; i++)
             mBlobColorHsv.val[i] /= pointCount;
 
@@ -433,8 +464,8 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         trackLine.setHsvColor(mBlobColorHsv);
 
-        SensorT.setText("Lower Mask : " + trackLine.getmLowerBound().val[0] +"," + trackLine.getmLowerBound().val[1]+"," + trackLine.getmLowerBound().val[2]+"," + trackLine.getmLowerBound().val[3]+"\n"+
-                "Upper Mask : " + trackLine.getmUpperBound().val[0] +"," + trackLine.getmUpperBound().val[1]+"," + trackLine.getmUpperBound().val[2]+"," + trackLine.getmUpperBound().val[3]);
+        SensorT.setText("Lower Mask : " + trackLine.getmLowerBound().val[0] + "," + trackLine.getmLowerBound().val[1] + "," + trackLine.getmLowerBound().val[2] + "," + trackLine.getmLowerBound().val[3] + "\n" +
+                "Upper Mask : " + trackLine.getmUpperBound().val[0] + "," + trackLine.getmUpperBound().val[1] + "," + trackLine.getmUpperBound().val[2] + "," + trackLine.getmUpperBound().val[3]);
 
         Imgproc.resize(trackLine.getSpectrum(), mSpectrum, SPECTRUM_SIZE);
 
@@ -453,4 +484,91 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         return new Scalar(pointMatRgba.get(0, 0));
     }
+
+    private String kondisiDataBola() {
+        String dataSend = " ";
+
+        double x = trackLine.getCenterMoment().y;
+        double y = trackLine.getCenterMoment().x;
+
+        if (x >= 1 && x <= 55) {
+            dataSend = "f";
+        } else if (x >= 51 && x <= 105) {
+            dataSend = "e";
+        } else if (x >= 106 && x <= 160) {
+            dataSend = "d";
+        } else if (x >= 426 && x <= 480) {
+            dataSend = "a";
+        } else if (x >= 371 && x <= 425) {
+            dataSend = "b";
+        } else if (x >= 315 && x <= 370) {
+            dataSend = "c";
+        }
+        //Mid
+        else if (x >= 160 && x <= 315 && y >= 551 && y <= 690) {
+            dataSend = "1";
+        } else if (x >= 160 && x <= 315 && y >= 384 && y <= 550) {
+            dataSend = "2";
+        } else if (x >= 160 && x <= 315 && y >= 256 && y <= 383) {
+            dataSend = "3";
+        } else if (x >= 160 && x <= 315 && y >= 129 && y <= 255) {
+            dataSend = "4";
+        } else if (x >= 160 && x <= 315 && y >= 1 && y <= 128) {
+            dataSend = "5";
+        } else if (trackLine.getContours().isEmpty()) {
+            dataSend = " ";
+        }
+
+
+        return dataSend;
+
+    }
+
+    private String kondisiDataGaris() {
+
+        String mt = " ";
+        String nt = " ";
+
+
+        int x = (int) trackLine.getCenterMoment().y;
+        int y = (int) trackLine.getCenterMoment().x;
+
+        int lebarJalur = 0;
+        int tinggiJalur = 0;
+        int rotasiJalur = 0;
+        if (trackLine.getRotatedBox() != null) {
+            lebarJalur = trackLine.getRotatedBox()[0];
+            tinggiJalur = trackLine.getRotatedBox()[1];
+            rotasiJalur = trackLine.getRotatedBox()[2];
+        }
+
+
+        // nt{
+        //      75 = setPoint
+        //}
+        //mt{
+        //      0 = setPoint
+        //}
+        //tt{
+        //      < 200 = ambil
+
+        if (rotasiJalur <= -10 && rotasiJalur < 0) {
+            //serongKiri
+            mt = String.valueOf(rotasiJalur);
+            nt = "75";
+        } else if (rotasiJalur < 10 && rotasiJalur > -10) {
+            //Tengah
+            mt = String.valueOf(rotasiJalur);
+            //NaikTurun
+            nt = String.valueOf(lebarJalur);
+
+        } else if (rotasiJalur >= 10) {
+            //serongKanan
+            mt = String.valueOf(rotasiJalur);
+            nt = "75";
+        }
+
+        return mt + ":" + nt + "\n";
+    }
+
 }

@@ -1,6 +1,6 @@
 /*
  * This file is auto-generated.  DO NOT MODIFY.
- * Original file: /home/zersya/AndroidStudioProjects/LineTrack/openCVLibrary24131/src/main/aidl/org/opencv/engine/OpenCVEngineInterface.aidl
+ * Original file: C:\\Users\\Zein Ersyad\\Google Drive\\Belajar\\AndroidStudio\\LineTrack\\openCVLibrary24131\\src\\main\\aidl\\org\\opencv\\engine\\OpenCVEngineInterface.aidl
  */
 package org.opencv.engine;
 /**
