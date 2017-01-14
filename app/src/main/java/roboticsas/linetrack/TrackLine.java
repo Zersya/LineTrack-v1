@@ -178,11 +178,6 @@ public class TrackLine {
 
 //            Mat mapMatrix = Imgproc.getRotationMatrix2D(new Point(x, y), contourAngle, 1.0);
 
-//            System.out.println("Contour Tinggi : " + (int) box.size.height);
-//            System.out.println("Contour Lebar  : " + (int) box.size.width);
-//            System.out.println("Contour angle  : " + (int) contourAngle);
-//            Core.rectangle(mFinal, box.boundingRect().tl(), box.boundingRect().br(), new Scalar(255, 0, 150, 255), 1);
-
             }
 
             rotatedBox[0] = box.boundingRect().height;
@@ -241,24 +236,6 @@ public class TrackLine {
             }
         }
 
-
-    }
-
-    public void samainWarna(Mat input) {
-
-        for (int y = 0; y < input.cols(); y++) {
-            for (int x = 0; x < input.rows(); x++) {
-                if (y >= 20 && y <= 50) {
-                    if (x >= input.rows() / 2 - 30 && x <= input.rows() / 2 + 30) {
-
-                    }
-                }
-            }
-        }
-
-        double[] rgb = input.get(input.cols() / 2, input.rows() / 2);
-
-        System.out.println("color : " + rgb[0] + ":" + rgb[1] + ":" + rgb[2]);
 
     }
 
