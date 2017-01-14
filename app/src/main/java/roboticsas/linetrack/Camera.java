@@ -41,10 +41,11 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.highgui.Highgui;
+//import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.HashMap;
@@ -220,7 +221,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         mOpenCVCameraView = (JavaCameraView) findViewById(R.id.show_camera_activity_java_surface_view);
 
-        mOpenCVCameraView.setMaxFrameSize(768, 1024);
+        mOpenCVCameraView.setMaxFrameSize(400, 400);
         mOpenCVCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCVCameraView.setCvCameraViewListener(this);
 
@@ -334,7 +335,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV not found, Using OpenCV manager for Initialize");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_13, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, this, mLoaderCallback);
         } else {
             Log.d(TAG, "OpenCV loader found inside The Package, Using it!!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
@@ -372,29 +373,35 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         mRgba = inputFrame.rgba();
-//        if (mIsColorSelected) {
 
-        trackLine.ProcThresh(mRgba);
+
+        if (mIsColorSelected) {
+
+            trackLine.ProcThresh(mRgba);
 //            trackLine.drawContour(mRgba);
-        if (connection != null) {
-            serialPort.write(sendData().getBytes());
+            if (connection != null) {
+                serialPort.write(sendData().getBytes());
+            }
+
+            tvAppend(Status, "\nData Arduino : " + sendData());
+
+            scrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    scrollView.fullScroll(View.FOCUS_DOWN);
+                }
+            });
+
         }
 
-        tvAppend(Status, "\nData Arduino : " + sendData());
+//
 
-        scrollView.post(new Runnable() {
-            @Override
-            public void run() {
-                scrollView.fullScroll(View.FOCUS_DOWN);
-            }
-        });
-//        }
-
-        Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
-        mSpectrum.copyTo(spectrumLabel);
+//        Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
+//        mSpectrum.copyTo(spectrumLabel);
 
 
         return mRgba;
+
     }
 
 
@@ -540,6 +547,9 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
             lebarJalur = trackLine.getRotatedBox()[0];
             tinggiJalur = trackLine.getRotatedBox()[1];
             rotasiJalur = trackLine.getRotatedBox()[2];
+        } else {
+            lebarJalur = 120;
+            rotasiJalur = 0;
         }
 
 
@@ -555,7 +565,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         if (rotasiJalur <= -10 && rotasiJalur < 0) {
             //serongKiri
             mt = String.valueOf(rotasiJalur);
-            nt = "75";
+            nt = "135";
         } else if (rotasiJalur < 10 && rotasiJalur > -10) {
             //Tengah
             mt = String.valueOf(rotasiJalur);
@@ -565,7 +575,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         } else if (rotasiJalur >= 10) {
             //serongKanan
             mt = String.valueOf(rotasiJalur);
-            nt = "75";
+            nt = "135";
         }
 
         return mt + ":" + nt + "\n";
