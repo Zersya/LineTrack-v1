@@ -28,10 +28,10 @@ import java.util.List;
 public class TrackLine {
 
     //Variable Wadah buat Gambar
-    private Mat mMask = new Mat();
-    private Mat mDillateMask = new Mat();
-    private Mat mHsvMat = new Mat();
     private Mat mFinal = new Mat();
+    private Mat BFinal = new Mat();
+    private Mat mADillateMask = new Mat();
+    private Mat mBDillateMask = new Mat();
     //Variable untuk Pengaturan/Pemilihan Warna
     private Scalar mLowerBound = new Scalar(0);
     private Scalar mUpperBound = new Scalar(0);
@@ -42,15 +42,27 @@ public class TrackLine {
     private static double mMinContourArea = 0.1;
     //Variable untuk mencari Contour warna
     private List<MatOfPoint> mContour = new ArrayList<MatOfPoint>();
+    private List<MatOfPoint> BContour = new ArrayList<MatOfPoint>();
     //Variable untuk menyimpan titik Tengah Warna
     private Point centerMoment = new Point();
+    private Point centerCamera = new Point();
     //Variable untuk menyimpan TopLeft dan BottomRight dari Drawing Box
     private Rect bounding_rect = null;
-    private int rotatedBox[] = new int[3];
 
+    private int ArotatedBox[] = new int[3];
+    private int BrotatedBox[] = new int[3];
+    private int Time = 0;
+
+    private RotatedRect box = null;
     private boolean ambil = false;
-
-    private int largestContourIndex = 0;
+    private boolean aktif = false;
+    private boolean hitung = false;
+    //Use ROI
+    private Rect Aroi;
+    private Rect Broi;
+    private Mat Aoutput;
+    private Mat Boutput;
+    private Thread count;
 
 
     public void setColorRadius(Scalar radius) {
@@ -111,45 +123,121 @@ public class TrackLine {
 
 //        mLowerBound = new Scalar(4.128, 153.5, 205.0, 0.0);
 //        mUpperBound = new Scalar(54.218, 253.5, 305.0, 255);
-
-//        mLowerBound = new Scalar(10.234, 173.218, 205.0, 0.0);
-//        mUpperBound = new Scalar(60.234, 273.218, 305.0, 255);
+//
+        mLowerBound = new Scalar(7.204, 186.348, 204.73, 0.0);
+        mUpperBound = new Scalar(57.204, 286.348, 305.0, 255);
 
 //        Imgproc.blur(mRgba, mRgba, new Size(1, 1));
-        Rect roi = new Rect(new Point(30, mRgba.rows() / 2 - 130), new Point(80, mRgba.rows() / 2 + 130));
-        Mat output = new Mat(mRgba, roi);
-        Imgproc.rectangle(mRgba, new Point(30, mRgba.rows() / 2 - 140), new Point(80, mRgba.rows() / 2 + 140), new Scalar(255, 255, 0, 255), 1);
-        Imgproc.cvtColor(output, mHsvMat, Imgproc.COLOR_RGB2HSV_FULL);
+
+        Mat mMask = new Mat();
+        Mat mDillateMask = new Mat();
+        Mat mHsvMat = new Mat();
+
+        Aroi = new Rect(new Point(30, mRgba.rows() / 2 - 230), new Point(200, mRgba.rows() / 2 + 230));
+        Aoutput = new Mat(mRgba, Aroi);
+
+        centerCamera = new Point(Aoutput.cols() / 2, Aoutput.rows() / 2);
+
+        Core.rectangle(mRgba, new Point(30, mRgba.rows() / 2 - 230), new Point(200, mRgba.rows() / 2 + 230), new Scalar(0, 100, 255, 255), 1);
+
+        Imgproc.cvtColor(Aoutput, mHsvMat, Imgproc.COLOR_RGB2HSV_FULL);
         Core.inRange(mHsvMat, mLowerBound, mUpperBound, mMask);
-        Imgproc.dilate(mMask, mDillateMask, new Mat());
-        mFinal = output;
+        Imgproc.dilate(mMask, mADillateMask, new Mat());
+
+        mFinal = Aoutput;
+
+        Core.circle(mFinal, centerCamera, 3, new Scalar(255, 205, 0, 255), 2);
         ProcContour();
+    }
+
+    public void ProcThresh2(Mat mRgba) {
+
+        int largestArea = 0;
+        Mat mMask = new Mat();
+        Mat mHsvMat = new Mat();
+        if (aktif) {
+            Broi = new Rect(new Point(mRgba.cols() - 30, mRgba.rows() / 2 - 180), new Point(mRgba.cols() - 80, mRgba.rows() / 2 + 180));
+            Boutput = new Mat(mRgba, Broi);
+            Core.rectangle(mRgba, new Point(mRgba.cols() - 30, mRgba.rows() / 2 - 180), new Point(mRgba.cols() - 80, mRgba.rows() / 2 + 180), new Scalar(0, 100, 255, 255), 1);
+
+            Imgproc.cvtColor(Boutput, mHsvMat, Imgproc.COLOR_RGB2HSV_FULL);
+            Core.inRange(mHsvMat, mLowerBound, mUpperBound, mMask);
+            Imgproc.dilate(mMask, mBDillateMask, new Mat());
+            BFinal = Boutput;
+
+            Imgproc.findContours(mBDillateMask, BContour, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
+            RotatedRect box = null;
+            double contourAngle = 0;
+            MatOfPoint2f allPoints = new MatOfPoint2f();
+            int largestContourIndex = 0;
+
+            if (BContour.size() > 0) {
+                for (int i = 0; i < BContour.size(); i++) {
+                    double a = Imgproc.contourArea(BContour.get(i), false);
+
+                    if (a > largestArea) {
+                        largestArea = (int) a;
+                        MatOfPoint2f points = new MatOfPoint2f(BContour.get(i).toArray());
+                        allPoints.push_back(points);
+
+                        box = Imgproc.minAreaRect(points);
+
+                        contourAngle = box.angle;
+                    }
+                }
+                if (box != null) {
+                    if (box.size.width < box.size.height) {
+                        contourAngle = 90 + contourAngle;
+                    }
+
+                    Point[] points = new Point[4];
+                    box.points(points);
+                    for (int j = 0; j < 4; j++) {
+                        Core.line(BFinal, points[j], points[(j + 1) % 4], new Scalar(255, 0, 150, 255), 2);
+
+//            Mat mapMatrix = Imgproc.getRotationMatrix2D(new Point(x, y), contourAngle, 1.0);
+//
+                    }
+
+                    BrotatedBox[0] = box.boundingRect().height;
+                    BrotatedBox[1] = (int) box.size.height;
+                    BrotatedBox[2] = (int) contourAngle;
+                }
+            } else {
+                BrotatedBox[0] = 0;
+                BrotatedBox[2] = 0;
+                aktif = false;
+            }
+
+            BContour.clear();
+        }
     }
 
     public void ProcContour() {
         int largestArea = 0;
 
         Mat mHierarchy = new Mat();
-        Imgproc.findContours(mDillateMask, mContour, mHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mADillateMask, mContour, mHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        List<Moments> mu = new ArrayList<Moments>(getContours().size());
+        List<Moments> mu = new ArrayList<Moments>(mContour.size());
 
-        RotatedRect box = null;
         double contourAngle = 0;
         int positionContour = 0;
         MatOfPoint2f allPoints = new MatOfPoint2f();
 
-
         int x = 0, y = 0;
+
         if (mContour.size() > 0) {
             for (int i = 0; i < mContour.size(); i++) {
-//
-//                mu.add(i, Imgproc.moments(getContours().get(i), false));
-//                Moments p = mu.get(i);
-//
-//                x = (int) (p.get_m10() / p.get_m00());
-//                y = (int) (p.get_m01() / p.get_m00());
-                double a = Imgproc.contourArea(getContours().get(i), false);
+//Cari titikTengah
+                mu.add(i, Imgproc.moments(mContour.get(i), false));
+                Moments p = mu.get(i);
+
+                x = (int) (p.get_m10() / p.get_m00());
+                y = (int) (p.get_m01() / p.get_m00());
+                double a = Imgproc.contourArea(mContour.get(i), false);
+                int largestContourIndex = 0;
 
                 if (a > largestArea) {
                     largestArea = (int) a;
@@ -164,37 +252,41 @@ public class TrackLine {
                     box = Imgproc.minAreaRect(points);
 
                     contourAngle = box.angle;
+
                 }
             }
+            if (box != null) {
+                if (box.size.width < box.size.height) {
+                    contourAngle = 90 + contourAngle;
+                }
 
-            if (box.size.width < box.size.height) {
-                contourAngle = 90 + contourAngle;
+                Point[] points = new Point[4];
+                box.points(points);
+                for (int j = 0; j < 4; j++) {
+                    Core.line(mFinal, points[j], points[(j + 1) % 4], new Scalar(255, 0, 150, 255), 2);
+                }
+
+                ArotatedBox[0] = box.boundingRect().height;
+                ArotatedBox[1] = (int) box.size.height;
+                ArotatedBox[2] = (int) contourAngle;
+                Time = 0;
             }
-
-            Point[] points = new Point[4];
-            box.points(points);
-            for (int j = 0; j < 4; j++) {
-                Imgproc.line(mFinal, points[j], points[(j + 1) % 4], new Scalar(255, 0, 150, 255), 2);
-
-//            Mat mapMatrix = Imgproc.getRotationMatrix2D(new Point(x, y), contourAngle, 1.0);
+        } else {
+            Time += 1;
+            if (Time == 50) {
+                centerMoment.y = Aoutput.rows()/2;
+                centerMoment.x = Aoutput.cols()/2;
 
             }
-
-            rotatedBox[0] = box.boundingRect().height;
-            rotatedBox[1] = (int) box.size.height;
-            rotatedBox[2] = (int) contourAngle;
+            ArotatedBox[2] = 9999;
         }
 
-        if (mContour.isEmpty()) {
-            centerMoment.x = -1;
-            centerMoment.y = -1;
-            x = (int) centerMoment.x;
-            y = (int) centerMoment.y;
-        }
-        try {
-//            Imgproc.circle(mFinal, centerMoment, 2, new Scalar(0, 250, 150, 255), 2);
+        try
+
+        {
+            Core.circle(mFinal, centerMoment, 2, new Scalar(0, 250, 150, 255), 2);
 //            Core.rectangle(mFinal, bounding_rect.tl(), bounding_rect.br(), new Scalar(255, 0, 150, 255), 1);
-            Imgproc.drawContours(mFinal, getContours(), largestContourIndex, new Scalar(255, 0, 255, 255),2);
+//            Imgproc.drawContours(mFinal, getContours(), largestContourIndex, new Scalar(255, 0, 255, 255), 2);
 
             mContour.clear();
         } catch (Exception e) {
@@ -268,10 +360,10 @@ public class TrackLine {
     }
 
     public Mat getDillate() {
-        return mDillateMask;
+        return mADillateMask;
     }
 
-    public List<MatOfPoint> getContours() {
+    public List<MatOfPoint> getAContours() {
         return mContour;
     }
 
@@ -284,10 +376,18 @@ public class TrackLine {
     }
 
     public int[] getRotatedBox() {
-        return rotatedBox;
+        return ArotatedBox;
     }
 
-    public int getLargestContourIndex() {
-        return largestContourIndex;
+    public boolean getAktiv() {
+        return aktif;
+    }
+
+    public Point getCenterCamera() {
+        return centerCamera;
+    }
+
+    public Thread getCount() {
+        return count;
     }
 }

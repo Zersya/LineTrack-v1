@@ -68,7 +68,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
     private int tlH, tlS, tlV, tuH, tuS, tuV, vId;
     private float accelX, accelY, accelZ;
     private boolean stat = false;
-
+    private int Time = 0, State = 0;
     private boolean mIsColorSelected = false;
     private Mat mSpectrum;
     private Size SPECTRUM_SIZE;
@@ -166,11 +166,11 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         spec1.setContent(R.id.tab1);
         spec1.setIndicator("Camera");
         tabHost.addTab(spec1);
-//        //Tab 32
-        TabHost.TabSpec spec3 = tabHost.newTabSpec("Connection");
-        spec3.setContent(R.id.tab3);
-        spec3.setIndicator("Connection");
-        tabHost.addTab(spec3);
+//        //Tab 2
+        TabHost.TabSpec spec2 = tabHost.newTabSpec("Connection");
+        spec2.setContent(R.id.tab2);
+        spec2.setIndicator("Connection");
+        tabHost.addTab(spec2);
 
         btnOpen = (Button) findViewById(R.id.btnOpen);
         btnOpen.setOnClickListener(new View.OnClickListener() {
@@ -187,16 +187,13 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
             public void onClick(View view) {
                 onClickStop(view);
                 stat = false;
+                System.exit(0);
             }
         });
 
         Status = (TextView) findViewById(R.id.Status);
+        SensorT = (TextView) findViewById(R.id.SensorT);
         scrollView = (ScrollView) findViewById(R.id.sv);
-
-        SensorT = (TextView) findViewById(R.id.SensorT);
-
-        Status.setTextColor(Color.WHITE);
-        SensorT = (TextView) findViewById(R.id.SensorT);
 
         Status.setTextColor(Color.WHITE);
         SensorT.setTextColor(Color.WHITE);
@@ -221,7 +218,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         mOpenCVCameraView = (JavaCameraView) findViewById(R.id.show_camera_activity_java_surface_view);
 
-        mOpenCVCameraView.setMaxFrameSize(400, 400);
+        mOpenCVCameraView.setMaxFrameSize(500, 500);
         mOpenCVCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCVCameraView.setCvCameraViewListener(this);
 
@@ -243,12 +240,13 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 //                    });
 //
 //                    try {
-//                        sleep(50);
+//                        sleep(20);
 //                    } catch (InterruptedException e) {
 //                    }
 //                }
 //            }
 //        }.start();
+
 
     }
 
@@ -335,7 +333,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
 
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV not found, Using OpenCV manager for Initialize");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_13, this, mLoaderCallback);
         } else {
             Log.d(TAG, "OpenCV loader found inside The Package, Using it!!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
@@ -375,9 +373,10 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         mRgba = inputFrame.rgba();
 
 
-        if (mIsColorSelected) {
+//        if (mIsColorSelected) {
 
             trackLine.ProcThresh(mRgba);
+
 //            trackLine.drawContour(mRgba);
             if (connection != null) {
                 serialPort.write(sendData().getBytes());
@@ -392,13 +391,10 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
                 }
             });
 
-        }
+//        }
 
-//
-
-//        Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
-//        mSpectrum.copyTo(spectrumLabel);
-
+        Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
+        mSpectrum.copyTo(spectrumLabel);
 
         return mRgba;
 
@@ -522,7 +518,7 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
             dataSend = "4";
         } else if (x >= 160 && x <= 315 && y >= 1 && y <= 128) {
             dataSend = "5";
-        } else if (trackLine.getContours().isEmpty()) {
+        } else if (trackLine.getAContours().isEmpty()) {
             dataSend = " ";
         }
 
@@ -536,10 +532,9 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
         String mt = " ";
         String nt = " ";
 
-
         int x = (int) trackLine.getCenterMoment().y;
         int y = (int) trackLine.getCenterMoment().x;
-
+        int errorCenter = 0;
         int lebarJalur = 0;
         int tinggiJalur = 0;
         int rotasiJalur = 0;
@@ -547,36 +542,12 @@ public class Camera extends AppCompatActivity implements OnTouchListener, Camera
             lebarJalur = trackLine.getRotatedBox()[0];
             tinggiJalur = trackLine.getRotatedBox()[1];
             rotasiJalur = trackLine.getRotatedBox()[2];
-        } else {
-            lebarJalur = 120;
-            rotasiJalur = 0;
+            errorCenter = (int) trackLine.getCenterCamera().y - x;
         }
 
+        mt = String.valueOf(errorCenter);
+        nt = String.valueOf(rotasiJalur);
 
-        // nt{
-        //      75 = setPoint
-        //}
-        //mt{
-        //      0 = setPoint
-        //}
-        //tt{
-        //      < 200 = ambil
-
-        if (rotasiJalur <= -10 && rotasiJalur < 0) {
-            //serongKiri
-            mt = String.valueOf(rotasiJalur);
-            nt = "135";
-        } else if (rotasiJalur < 10 && rotasiJalur > -10) {
-            //Tengah
-            mt = String.valueOf(rotasiJalur);
-            //NaikTurun
-            nt = String.valueOf(lebarJalur);
-
-        } else if (rotasiJalur >= 10) {
-            //serongKanan
-            mt = String.valueOf(rotasiJalur);
-            nt = "135";
-        }
 
         return mt + ":" + nt + "\n";
     }
